@@ -1,6 +1,7 @@
 import pygame
-import math
 from OpenGL.GL import *
+from OpenGL.arrays import vbo
+import numpy
 from OpenGL.GLU import *
 
 def readOBJ():
@@ -21,37 +22,32 @@ def readOBJ():
                 face = []
                 norms = []
                 for v in vals[1:]:
-                    w = v.split('/')
+                    w = v.split('//')
                     face.append(int(w[0]))
-                    #norms.append(int(w[1]))
-                    norms.append(int(w[2]))
+                    norms.append(int(w[1]))
                 faces.append((face, norms))
+                #print(faces)
     return vertices, normals, faces
 
 
-
-def prep_OBJ():
-    global dlist
+def vbo_obj():
+    global vertices, normals, faceIDX
     vertices, normals, faceIDX = readOBJ()
-    print("Vertex list in prep:"+str(vertices))
-    
-    dlist = glGenLists(1)
-    glNewList(dlist, GL_COMPILE) #A reusable, global commandlist stored in GL
-    glFrontFace(GL_CCW)
+    global vboo
+    pa = []
+    #Faces in an index buffer?
     for face in faceIDX:
         verts, norms = face
-        print("face:"+str(face))
-        #glColor3f(1,1,1)
-        glBegin(GL_QUADS)
-        for i in range(len(verts)):
-            if norms[i] > 0:
-                glNormal3fv(normals[norms[i]-1])
-                print("Normal="+str(normals[norms[i]-1]))
-                #pass
-            glVertex3fv(vertices[verts[i]-1])
-            print("Vertex="+str(vertices[verts[i]-1]))
-        glEnd()
-    glEndList() #End the command list
+        print(verts)
+        pa.append([vertices[v-1] for v in verts])
+    print("face based varray:"+str(pa))
+    npa = numpy.array(pa,'f')
+    vboo = vbo.VBO(npa) #NPA was INDEXES OF VERTICES NOT VERTICES
+    
+    print("len vertices:"+str(len(vertices)))
+    print(vertices)
+    
+        
 
 def main():
     pygame.init()
@@ -73,7 +69,13 @@ def main():
     glEnable(GL_DEPTH_TEST)
     #glLoadIdentity()
     #glRotatef(90,0,1,0)
-    prep_OBJ()
+    #prep_OBJ()
+    
+    vbo_obj()
+    vboo.bind()
+    glEnableClientState(GL_VERTEX_ARRAY)
+    glVertexPointer(3, GL_FLOAT, 12, vboo)
+
 
     #Game loop itself
     while True:
@@ -106,11 +108,10 @@ def main():
                 
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
 
-        #glRotatef(1,0,1,0)
         gluCylinder(gluNewQuadric(), 10, 20, 100, 10, 10)
-        #gluSphere(gluNewQuadric(),100,32,8)
+
+        glDrawArrays(GL_TRIANGLES, 0, len(faceIDX)*3)
         
-        glCallList(dlist)
         pygame.display.flip()
         pygame.time.wait(10)
         
