@@ -5,27 +5,31 @@ import numpy
 from OpenGL.GLU import *
 
 def readOBJ():
-    of = open("C:\\Users\\walte\\Desktop\\t3.obj")
+    of = open("C:\\Users\\walte\\Desktop\\t4.obj")
     of.seek(0)
     vertices = []
     normals = []
     faces = []
     for line in of:
-            vals = line.split()
-            if vals == []:
-                continue
-            if vals[0]=='v':
-                vertices.append(list(map(float,vals[1:4])))
-            elif vals[0] ==  'vn':
-                normals.append(list(map(float, vals[1:4])))
-            elif vals[0] == 'f':
-                face = []
-                norms = []
-                for v in vals[1:]:
-                    w = v.split('//')
-                    face.append(int(w[0]))
-                    norms.append(int(w[1]))
-                faces.append((face, norms))
+        vals = line.split()
+        if vals == []:
+            continue
+        if vals[0]=='v':
+            vertices.append(list(map(float,vals[1:4])))
+        elif vals[0] ==  'vn':
+            normals.append(list(map(float, vals[1:4])))
+    of.seek(0)
+    for line in of:
+        vals = line.split()
+        if vals == []: continue
+        if vals[0] == 'f':
+            face = []
+            norms = []
+            for v in vals[1:]:
+                w = v.split('//')
+                face.append(int(w[0]))
+                norms.append(int(w[1]))
+            faces.append((face, norms))
     return vertices, normals, faces
 
 
@@ -34,14 +38,17 @@ def vbo_obj():
     vertices, normals, faceIDX = readOBJ()
     global vboo
     pa = []
-    #Faces in an index buffer?
     for face in faceIDX:
         verts, norms = face
-        pa.append \
-        ([[vertices[v-1] for v in verts] + [normals[c-1] for c in norms]])
+        trueverts = [vertices[v-1] for v in verts]
+        truenorms = [normals[n-1] for n in norms]
+        #Desired format: [vx vy vz nx ny nz] x 3
+        for i in range(len(trueverts)):
+            pa.append([trueverts[i] + truenorms[i]])
     npa = numpy.array(pa,'f')
     vboo = vbo.VBO(npa)     
-    
+
+#Normals are being interperted as coordinates somewhere
 
 def main():
     pygame.init()
@@ -52,11 +59,12 @@ def main():
     glEnable(GL_DEPTH_CLAMP)
     
     glEnable(GL_LIGHTING)
-    globalAmbient = [0.1, 0.1, 0.1, 0.5]
+    globalAmbient = [0.2, 0.2, 0.2, 0.5]
     glLightModelfv(GL_LIGHT_MODEL_AMBIENT, globalAmbient)
     glShadeModel(GL_FLAT)
-    glLightfv(GL_LIGHT0, GL_AMBIENT, (.2,.2,.2,.2))
+    glLightfv(GL_LIGHT0, GL_AMBIENT, (.2,.2,.2,.5))
     glLightfv(GL_LIGHT0, GL_DIFFUSE, ( .8, 0, 0, .7))
+    glLightfv(GL_LIGHT0, GL_SPECULAR, (0,0.9, 0.5, 1))
     glLightfv(GL_LIGHT0, GL_POSITION, (0,500,0))
     glClearColor(0,1,1,1)
     glEnable(GL_LIGHT0)
@@ -102,10 +110,6 @@ def main():
                 glPopMatrix();
                 
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
-        glPushMatrix()
-        glRotatef(90,1,0,0)
-        gluCylinder(gluNewQuadric(), 10, 20, 100, 10, 10)
-        glPopMatrix()
         
         glDrawArrays(GL_TRIANGLES, 0, len(faceIDX)*3)
 
